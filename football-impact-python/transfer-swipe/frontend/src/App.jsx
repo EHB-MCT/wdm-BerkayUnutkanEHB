@@ -20,6 +20,7 @@ export default function App() {
 	const allRumours = useMemo(() => rumours, []);
 	const [current, setCurrent] = useState(() => pickRandom(allRumours));
 	const [count, setCount] = useState(0);
+	const [events, setEvents] = useState([]);
 	const shownAtRef = useRef(Date.now());
 
 	useEffect(() => {
@@ -29,15 +30,19 @@ export default function App() {
 	function vote(value) {
 		const decisionMs = Date.now() - shownAtRef.current;
 
-		console.log("VOTE", {
+		const event = {
 			uid,
 			id: current.id,
 			club: current.club,
 			league: current.league,
 			value,
 			decisionMs,
-		});
+			ts: new Date().toISOString(),
+		};
 
+		console.log("VOTE", event);
+
+		setEvents((prev) => [event, ...prev].slice(0, 5));
 		setCount((c) => c + 1);
 		setCurrent(pickRandom(allRumours));
 	}
@@ -88,6 +93,37 @@ export default function App() {
 					>
 						👍 Geloofwaardig
 					</button>
+				</div>
+				<div style={{ marginTop: 18 }}>
+					<h3 style={{ fontSize: 14, marginBottom: 6, opacity: 0.8 }}>
+						Laatste acties
+					</h3>
+
+					{events.length === 0 && (
+						<p style={{ fontSize: 12, opacity: 0.6 }}>
+							Nog geen acties geregistreerd
+						</p>
+					)}
+
+					{events.map((e, i) => (
+						<div
+							key={i}
+							style={{
+								fontSize: 12,
+								padding: "6px 8px",
+								marginBottom: 4,
+								borderRadius: 8,
+								background: "rgba(255,255,255,0.06)",
+								display: "flex",
+								justifyContent: "space-between",
+							}}
+						>
+							<span>
+								{e.value === "up" ? "👍" : "👎"} {e.club}
+							</span>
+							<span>{e.decisionMs} ms</span>
+						</div>
+					))}
 				</div>
 
 				<div style={styles.footer}>
