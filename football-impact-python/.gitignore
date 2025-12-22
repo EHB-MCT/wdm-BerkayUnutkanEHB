@@ -1,9 +1,18 @@
 # Build output / caches
+.gradle/
+build/
 **/.gradle/
 **/build/
-**/node_modules/
-**/dist/
-**/.DS_Store
+
+# Node / frontend
+node_modules/
+dist/
+
+# System
+.DS_Store
 
 # Env
 .env
+# Ignore build artifacts from football-impact (other folder in this repo)
+football-impact/.gradle/
+football-impact/build/
