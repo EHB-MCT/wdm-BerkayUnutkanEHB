@@ -1,0 +1,142 @@
+[
+	{
+		"id": "R001",
+		"club": "Fenerbahçe",
+		"league": "Süper Lig",
+		"neutralTitle": "Fenerbahçe linked with a new midfielder",
+		"clickbaitTitle": "BREAKING: Fenerbahçe about to sign a ‘game-changing’ midfielder!"
+	},
+	{
+		"id": "R002",
+		"club": "Galatasaray",
+		"league": "Süper Lig",
+		"neutralTitle": "Galatasaray monitoring a young winger",
+		"clickbaitTitle": "SHOCK MOVE: Galatasaray chasing the next superstar winger!"
+	},
+	{
+		"id": "R003",
+		"club": "Beşiktaş",
+		"league": "Süper Lig",
+		"neutralTitle": "Beşiktaş in talks for a defender",
+		"clickbaitTitle": "CONFIRMED? Beşiktaş ready to steal a top defender!"
+	},
+	{
+		"id": "R004",
+		"club": "Fenerbahçe",
+		"league": "Süper Lig",
+		"neutralTitle": "Fenerbahçe considering a backup goalkeeper",
+		"clickbaitTitle": "YOU WON’T BELIEVE IT: Fenerbahçe wants a surprise goalkeeper!"
+	},
+	{
+		"id": "R005",
+		"club": "Manchester United",
+		"league": "Premier League",
+		"neutralTitle": "Manchester United scouting a striker option",
+		"clickbaitTitle": "BOMBSHELL: United preparing a huge striker move!"
+	},
+	{
+		"id": "R006",
+		"club": "Arsenal",
+		"league": "Premier League",
+		"neutralTitle": "Arsenal interested in a versatile fullback",
+		"clickbaitTitle": "Arsenal’s next signing could transform the whole team!"
+	},
+	{
+		"id": "R007",
+		"club": "Real Madrid",
+		"league": "La Liga",
+		"neutralTitle": "Real Madrid keeping an eye on a midfielder",
+		"clickbaitTitle": "Real Madrid plotting a scary midfield upgrade!"
+	},
+	{
+		"id": "R008",
+		"club": "Barcelona",
+		"league": "La Liga",
+		"neutralTitle": "Barcelona linked with an attacking midfielder",
+		"clickbaitTitle": "Barcelona set for a sensational creative signing!"
+	},
+	{
+		"id": "R009",
+		"club": "Bayern München",
+		"league": "Bundesliga",
+		"neutralTitle": "Bayern exploring a new winger profile",
+		"clickbaitTitle": "Bayern about to unleash a monster winger signing!"
+	},
+	{
+		"id": "R010",
+		"club": "Paris Saint-Germain",
+		"league": "Ligue 1",
+		"neutralTitle": "PSG considering a defensive midfielder",
+		"clickbaitTitle": "PSG ready to drop BIG money on a midfield destroyer!"
+	},
+	{
+		"id": "R011",
+		"club": "Fenerbahçe",
+		"league": "Süper Lig",
+		"neutralTitle": "Fenerbahçe linked with a fast winger",
+		"clickbaitTitle": "BREAKING: Fenerbahçe wants a speed demon on the wing!"
+	},
+	{
+		"id": "R012",
+		"club": "Ajax",
+		"league": "Eredivisie",
+		"neutralTitle": "Ajax tracking a promising center-back",
+		"clickbaitTitle": "Ajax about to sign a future world-class defender!"
+	},
+	{
+		"id": "R013",
+		"club": "Juventus",
+		"league": "Serie A",
+		"neutralTitle": "Juventus watching a veteran striker",
+		"clickbaitTitle": "Juventus planning a surprise striker deal!"
+	},
+	{
+		"id": "R014",
+		"club": "AC Milan",
+		"league": "Serie A",
+		"neutralTitle": "AC Milan linked to a young goalkeeper",
+		"clickbaitTitle": "AC Milan’s next keeper could be the next legend!"
+	},
+	{
+		"id": "R015",
+		"club": "Liverpool",
+		"league": "Premier League",
+		"neutralTitle": "Liverpool considering a midfield reinforcement",
+		"clickbaitTitle": "Liverpool preparing a massive midfield upgrade!"
+	},
+	{
+		"id": "R016",
+		"club": "Fenerbahçe",
+		"league": "Süper Lig",
+		"neutralTitle": "Fenerbahçe looking at a creative playmaker",
+		"clickbaitTitle": "WOW: Fenerbahçe chasing a magical playmaker!"
+	},
+	{
+		"id": "R017",
+		"club": "Chelsea",
+		"league": "Premier League",
+		"neutralTitle": "Chelsea monitoring a young striker",
+		"clickbaitTitle": "Chelsea ready to sign the next big striker talent!"
+	},
+	{
+		"id": "R018",
+		"club": "Inter",
+		"league": "Serie A",
+		"neutralTitle": "Inter interested in a right-back",
+		"clickbaitTitle": "Inter’s next signing could shock Serie A!"
+	},
+	{
+		"id": "R019",
+		"club": "Napoli",
+		"league": "Serie A",
+		"neutralTitle": "Napoli linked with a creative winger",
+		"clickbaitTitle": "Napoli about to land a dazzling winger signing!"
+	},
+	{
+		"id": "R020",
+		"club": "Fenerbahçe",
+		"league": "Süper Lig",
+		"neutralTitle": "Fenerbahçe considering a late-window signing",
+		"clickbaitTitle": "LAST MINUTE DRAMA: Fenerbahçe set for a surprise signing!"
+	}
+]
