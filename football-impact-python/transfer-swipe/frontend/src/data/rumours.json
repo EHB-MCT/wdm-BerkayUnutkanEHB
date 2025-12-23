@@ -3,140 +3,240 @@
 		"id": "R001",
 		"club": "Fenerbahçe",
 		"league": "Süper Lig",
-		"neutralTitle": "Fenerbahçe linked with a new midfielder",
-		"clickbaitTitle": "BREAKING: Fenerbahçe about to sign a ‘game-changing’ midfielder!"
+		"player": "Ismaël Koné",
+		"fromClub": "Watford",
+		"fee": "€8–10m",
+		"source": "Fanatik",
+		"reliability": 0.58,
+		"neutralTitle": "Fenerbahçe scouting Ismaël Koné as a midfield option",
+		"clickbaitTitle": "BREAKING: Fenerbahçe pushing hard for Ismaël Koné!"
 	},
 	{
 		"id": "R002",
 		"club": "Galatasaray",
 		"league": "Süper Lig",
-		"neutralTitle": "Galatasaray monitoring a young winger",
-		"clickbaitTitle": "SHOCK MOVE: Galatasaray chasing the next superstar winger!"
+		"player": "Yusuf Yazıcı",
+		"fromClub": "Lille",
+		"fee": "€7–9m",
+		"source": "Sabah",
+		"reliability": 0.46,
+		"neutralTitle": "Galatasaray monitoring Yusuf Yazıcı as a creative option",
+		"clickbaitTitle": "SHOCK MOVE: Galatasaray want Yusuf Yazıcı — talks heating up!"
 	},
 	{
 		"id": "R003",
 		"club": "Beşiktaş",
 		"league": "Süper Lig",
-		"neutralTitle": "Beşiktaş in talks for a defender",
-		"clickbaitTitle": "CONFIRMED? Beşiktaş ready to steal a top defender!"
+		"player": "Joe Worrall",
+		"fromClub": "Nottingham Forest",
+		"fee": "€6m",
+		"source": "NTV Spor",
+		"reliability": 0.66,
+		"neutralTitle": "Beşiktaş in talks for defender Joe Worrall",
+		"clickbaitTitle": "CONFIRMED? Beşiktaş close to signing Joe Worrall!"
 	},
 	{
 		"id": "R004",
 		"club": "Fenerbahçe",
 		"league": "Süper Lig",
-		"neutralTitle": "Fenerbahçe considering a backup goalkeeper",
-		"clickbaitTitle": "YOU WON’T BELIEVE IT: Fenerbahçe wants a surprise goalkeeper!"
+		"player": "Altay Bayındır",
+		"fromClub": "Manchester United",
+		"fee": "Loan",
+		"source": "TRT Spor",
+		"reliability": 0.62,
+		"neutralTitle": "Fenerbahçe considering a loan move for Altay Bayındır",
+		"clickbaitTitle": "YOU WON’T BELIEVE IT: Altay Bayındır return to Fenerbahçe is possible!"
 	},
 	{
 		"id": "R005",
 		"club": "Manchester United",
 		"league": "Premier League",
-		"neutralTitle": "Manchester United scouting a striker option",
-		"clickbaitTitle": "BOMBSHELL: United preparing a huge striker move!"
+		"player": "Evan Ferguson",
+		"fromClub": "Brighton",
+		"fee": "€55–65m",
+		"source": "Sky Sports",
+		"reliability": 0.69,
+		"neutralTitle": "Manchester United keeping tabs on Evan Ferguson as a striker option",
+		"clickbaitTitle": "BOMBSHELL: United want Evan Ferguson — huge striker move incoming?"
 	},
 	{
 		"id": "R006",
 		"club": "Arsenal",
 		"league": "Premier League",
-		"neutralTitle": "Arsenal interested in a versatile fullback",
-		"clickbaitTitle": "Arsenal’s next signing could transform the whole team!"
+		"player": "Jeremie Frimpong",
+		"fromClub": "Bayer Leverkusen",
+		"fee": "€40m",
+		"source": "The Athletic",
+		"reliability": 0.82,
+		"neutralTitle": "Arsenal interested in Jeremie Frimpong for a dynamic fullback role",
+		"clickbaitTitle": "Arsenal’s next signing REVEALED: Frimpong could change EVERYTHING!"
 	},
 	{
 		"id": "R007",
 		"club": "Real Madrid",
 		"league": "La Liga",
-		"neutralTitle": "Real Madrid keeping an eye on a midfielder",
-		"clickbaitTitle": "Real Madrid plotting a scary midfield upgrade!"
+		"player": "Florian Wirtz",
+		"fromClub": "Bayer Leverkusen",
+		"fee": "€100m+",
+		"source": "Marca",
+		"reliability": 0.55,
+		"neutralTitle": "Real Madrid monitoring Florian Wirtz situation for the future",
+		"clickbaitTitle": "Real Madrid plotting a GALÁCTICO move for Wirtz!"
 	},
 	{
 		"id": "R008",
 		"club": "Barcelona",
 		"league": "La Liga",
-		"neutralTitle": "Barcelona linked with an attacking midfielder",
-		"clickbaitTitle": "Barcelona set for a sensational creative signing!"
+		"player": "Dani Olmo",
+		"fromClub": "RB Leipzig",
+		"fee": "€45–55m",
+		"source": "Sport (ES)",
+		"reliability": 0.47,
+		"neutralTitle": "Barcelona linked with Dani Olmo as a creative midfield option",
+		"clickbaitTitle": "BARÇA MOVE: Dani Olmo signing could be closer than you think!"
 	},
 	{
 		"id": "R009",
 		"club": "Bayern München",
 		"league": "Bundesliga",
-		"neutralTitle": "Bayern exploring a new winger profile",
-		"clickbaitTitle": "Bayern about to unleash a monster winger signing!"
+		"player": "Nico Williams",
+		"fromClub": "Athletic Club",
+		"fee": "€50–60m",
+		"source": "Bild",
+		"reliability": 0.52,
+		"neutralTitle": "Bayern exploring Nico Williams as a winger profile",
+		"clickbaitTitle": "Bayern about to unleash chaos: NICO WILLIAMS talks heating up!"
 	},
 	{
 		"id": "R010",
 		"club": "Paris Saint-Germain",
 		"league": "Ligue 1",
-		"neutralTitle": "PSG considering a defensive midfielder",
-		"clickbaitTitle": "PSG ready to drop BIG money on a midfield destroyer!"
+		"player": "João Palhinha",
+		"fromClub": "Fulham",
+		"fee": "€45m",
+		"source": "L’Équipe",
+		"reliability": 0.63,
+		"neutralTitle": "PSG considering João Palhinha as a defensive midfield option",
+		"clickbaitTitle": "PSG ready to drop BIG money on Palhinha — here we go?"
 	},
 	{
 		"id": "R011",
 		"club": "Fenerbahçe",
 		"league": "Süper Lig",
-		"neutralTitle": "Fenerbahçe linked with a fast winger",
-		"clickbaitTitle": "BREAKING: Fenerbahçe wants a speed demon on the wing!"
+		"player": "Anis Hadj Moussa",
+		"fromClub": "Feyenoord",
+		"fee": "€10–12m",
+		"source": "Milliyet",
+		"reliability": 0.44,
+		"neutralTitle": "Fenerbahçe tracking Anis Hadj Moussa as a wide attacking option",
+		"clickbaitTitle": "BREAKING: Fenerbahçe want Hadj Moussa — speed + chaos guaranteed!"
 	},
 	{
 		"id": "R012",
 		"club": "Ajax",
 		"league": "Eredivisie",
-		"neutralTitle": "Ajax tracking a promising center-back",
-		"clickbaitTitle": "Ajax about to sign a future world-class defender!"
+		"player": "Sverre Nypan",
+		"fromClub": "Rosenborg",
+		"fee": "€12–15m",
+		"source": "Voetbal International",
+		"reliability": 0.71,
+		"neutralTitle": "Ajax scouting Sverre Nypan as a long-term midfield talent",
+		"clickbaitTitle": "Ajax close to the next wonderkid: Nypan deal rumours explode!"
 	},
 	{
 		"id": "R013",
 		"club": "Juventus",
 		"league": "Serie A",
-		"neutralTitle": "Juventus watching a veteran striker",
-		"clickbaitTitle": "Juventus planning a surprise striker deal!"
+		"player": "Domenico Berardi",
+		"fromClub": "Sassuolo",
+		"fee": "€12–18m",
+		"source": "Gazzetta",
+		"reliability": 0.54,
+		"neutralTitle": "Juventus watching Domenico Berardi for experience on the wing",
+		"clickbaitTitle": "Juventus surprise deal: BERARDI could be the next name in Turin!"
 	},
 	{
 		"id": "R014",
 		"club": "AC Milan",
 		"league": "Serie A",
-		"neutralTitle": "AC Milan linked to a young goalkeeper",
-		"clickbaitTitle": "AC Milan’s next keeper could be the next legend!"
+		"player": "Marco Carnesecchi",
+		"fromClub": "Atalanta",
+		"fee": "€25–30m",
+		"source": "Calciomercato",
+		"reliability": 0.49,
+		"neutralTitle": "AC Milan linked with Carnesecchi as a long-term goalkeeper option",
+		"clickbaitTitle": "AC Milan’s next keeper could be Carnesecchi — future No.1?"
 	},
 	{
 		"id": "R015",
 		"club": "Liverpool",
 		"league": "Premier League",
-		"neutralTitle": "Liverpool considering a midfield reinforcement",
-		"clickbaitTitle": "Liverpool preparing a massive midfield upgrade!"
+		"player": "João Neves",
+		"fromClub": "Benfica",
+		"fee": "€70–90m",
+		"source": "Fabrizio Romano (rumour)",
+		"reliability": 0.64,
+		"neutralTitle": "Liverpool monitoring João Neves as a potential midfield reinforcement",
+		"clickbaitTitle": "Liverpool midfield BOMBSHELL: João Neves links are getting serious!"
 	},
 	{
 		"id": "R016",
 		"club": "Fenerbahçe",
 		"league": "Süper Lig",
-		"neutralTitle": "Fenerbahçe looking at a creative playmaker",
-		"clickbaitTitle": "WOW: Fenerbahçe chasing a magical playmaker!"
+		"player": "Hakan Çalhanoğlu",
+		"fromClub": "Inter",
+		"fee": "€25–35m",
+		"source": "Fanatik",
+		"reliability": 0.38,
+		"neutralTitle": "Fenerbahçe discussing Hakan Çalhanoğlu — difficult but mentioned",
+		"clickbaitTitle": "WOW: Fenerbahçe dreaming big — Hakan Çalhanoğlu talks ‘on the table’!"
 	},
 	{
 		"id": "R017",
 		"club": "Chelsea",
 		"league": "Premier League",
-		"neutralTitle": "Chelsea monitoring a young striker",
-		"clickbaitTitle": "Chelsea ready to sign the next big striker talent!"
+		"player": "Benjamin Šeško",
+		"fromClub": "RB Leipzig",
+		"fee": "€55–70m",
+		"source": "The Guardian",
+		"reliability": 0.57,
+		"neutralTitle": "Chelsea monitoring Benjamin Šeško as a young striker profile",
+		"clickbaitTitle": "Chelsea ready to sign the next monster striker: ŠEŠKO links are real!"
 	},
 	{
 		"id": "R018",
 		"club": "Inter",
 		"league": "Serie A",
-		"neutralTitle": "Inter interested in a right-back",
-		"clickbaitTitle": "Inter’s next signing could shock Serie A!"
+		"player": "Nahuel Molina",
+		"fromClub": "Atlético Madrid",
+		"fee": "€25–30m",
+		"source": "Corriere dello Sport",
+		"reliability": 0.51,
+		"neutralTitle": "Inter interested in Nahuel Molina if right-back depth changes",
+		"clickbaitTitle": "Inter move could shock Serie A: Molina talks are ‘alive’!"
 	},
 	{
 		"id": "R019",
 		"club": "Napoli",
 		"league": "Serie A",
-		"neutralTitle": "Napoli linked with a creative winger",
-		"clickbaitTitle": "Napoli about to land a dazzling winger signing!"
+		"player": "Bryan Mbeumo",
+		"fromClub": "Brentford",
+		"fee": "€40–50m",
+		"source": "Sky Italia",
+		"reliability": 0.6,
+		"neutralTitle": "Napoli linked with Bryan Mbeumo for a direct winger option",
+		"clickbaitTitle": "Napoli about to land a dazzling winger: MBEUMO rumours heating up!"
 	},
 	{
 		"id": "R020",
 		"club": "Fenerbahçe",
 		"league": "Süper Lig",
-		"neutralTitle": "Fenerbahçe considering a late-window signing",
-		"clickbaitTitle": "LAST MINUTE DRAMA: Fenerbahçe set for a surprise signing!"
+		"player": "Pierre-Emile Højbjerg",
+		"fromClub": "Tottenham",
+		"fee": "Loan + option",
+		"source": "TRT Spor",
+		"reliability": 0.55,
+		"neutralTitle": "Fenerbahçe exploring a late-window loan for Pierre-Emile Højbjerg",
+		"clickbaitTitle": "LAST MINUTE DRAMA: Fenerbahçe close to a huge Højbjerg loan deal!"
 	}
 ]

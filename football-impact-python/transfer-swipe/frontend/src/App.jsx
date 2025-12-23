@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import rumours from "./data/rumours.json";
+
 const API_BASE = "http://localhost:3000";
+
+async function sendEvent(event) {
+	try {
+		await fetch(`${API_BASE}/events`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(event),
+		});
+	} catch (err) {
+		console.warn("Kon event niet versturen naar backend:", err);
+	}
+}
 
 function getOrCreateUID() {
 	let uid = localStorage.getItem("uid");
@@ -24,10 +37,33 @@ export default function App() {
 	const [events, setEvents] = useState([]);
 	const shownAtRef = useRef(Date.now());
 
+	// 1) session_start (1x bij openen)
+	useEffect(() => {
+		sendEvent({
+			uid,
+			type: "session_start",
+			ts: new Date().toISOString(),
+			page: "transfer-swipe",
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	// 2) rumor_shown (telkens als current verandert)
 	useEffect(() => {
 		shownAtRef.current = Date.now();
-	}, [current]);
 
+		sendEvent({
+			uid,
+			type: "rumor_shown",
+			ts: new Date().toISOString(),
+			page: "transfer-swipe",
+			id: current.id,
+			club: current.club,
+			league: current.league,
+		});
+	}, [current, uid]);
+
+	// 3) vote (bij klikken)
 	async function vote(value) {
 		const decisionMs = Date.now() - shownAtRef.current;
 
@@ -35,6 +71,7 @@ export default function App() {
 			uid,
 			type: "vote",
 			ts: new Date().toISOString(),
+			page: "transfer-swipe",
 			id: current.id,
 			club: current.club,
 			league: current.league,
@@ -42,24 +79,17 @@ export default function App() {
 			decisionMs,
 		};
 
-		// blijft handig voor debug
 		console.log("VOTE", event);
 
-		// live lijstje in UI (als je dat hebt)
+		// live lijstje in UI
 		setEvents((prev) => [event, ...prev].slice(0, 5));
 		setCount((c) => c + 1);
-		setCurrent(pickRandom(allRumours));
 
-		// stuur naar backend (fire-and-forget)
-		try {
-			await fetch(`${API_BASE}/events`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(event),
-			});
-		} catch (err) {
-			console.warn("Kon event niet versturen naar backend:", err);
-		}
+		// stuur naar backend
+		sendEvent(event);
+
+		// volgende rumor
+		setCurrent(pickRandom(allRumours));
 	}
 
 	return (
@@ -93,6 +123,11 @@ export default function App() {
 						bouwen.
 					</p>
 				</div>
+				<div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
+					Bron: <b>{current.source}</b> · Betrouwbaarheid:{" "}
+					<b>{Math.round(current.reliability * 100)}%</b> · Van:{" "}
+					<b>{current.fromClub}</b> · Fee: <b>{current.fee}</b>
+				</div>
 
 				<div style={styles.buttons}>
 					<button
@@ -101,7 +136,6 @@ export default function App() {
 					>
 						👎 Onzin
 					</button>
-
 					<button
 						onClick={() => vote("up")}
 						style={{ ...styles.button, ...styles.buttonUp }}
@@ -109,6 +143,7 @@ export default function App() {
 						👍 Geloofwaardig
 					</button>
 				</div>
+
 				<div style={{ marginTop: 18 }}>
 					<h3 style={{ fontSize: 14, marginBottom: 6, opacity: 0.8 }}>
 						Laatste acties
@@ -134,9 +169,13 @@ export default function App() {
 							}}
 						>
 							<span>
-								{e.value === "up" ? "👍" : "👎"} {e.club}
+								{e.type === "vote"
+									? `${e.value === "up" ? "👍" : "👎"} ${e.club}`
+									: `📌 ${e.type}`}
 							</span>
-							<span>{e.decisionMs} ms</span>
+							<span>
+								{e.decisionMs !== undefined ? `${e.decisionMs} ms` : ""}
+							</span>
 						</div>
 					))}
 				</div>
