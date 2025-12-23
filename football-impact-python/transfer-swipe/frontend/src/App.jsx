@@ -35,6 +35,7 @@ export default function App() {
 	const [current, setCurrent] = useState(() => pickRandom(allRumours));
 	const [count, setCount] = useState(0);
 	const [events, setEvents] = useState([]);
+	const [locked, setLocked] = useState(false); // ✅ voorkomt dubbel klikken
 	const shownAtRef = useRef(Date.now());
 
 	// 1) session_start (1x bij openen)
@@ -64,8 +65,13 @@ export default function App() {
 	}, [current, uid]);
 
 	// 3) vote (bij klikken)
-	async function vote(value) {
-		const decisionMs = Date.now() - shownAtRef.current;
+	function vote(value) {
+		// ✅ anti dubbelklik
+		if (locked) return;
+		setLocked(true);
+
+		const rawMs = Date.now() - shownAtRef.current;
+		const decisionMs = Math.min(rawMs, 60000); // max 60s
 
 		const event = {
 			uid,
@@ -90,6 +96,9 @@ export default function App() {
 
 		// volgende rumor
 		setCurrent(pickRandom(allRumours));
+
+		// ✅ unlock na korte tijd
+		setTimeout(() => setLocked(false), 350);
 	}
 
 	return (
@@ -122,23 +131,37 @@ export default function App() {
 						Je beslissingstijd wordt gemeten om een gebruikersprofiel op te
 						bouwen.
 					</p>
-				</div>
-				<div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
-					Bron: <b>{current.source}</b> · Betrouwbaarheid:{" "}
-					<b>{Math.round(current.reliability * 100)}%</b> · Van:{" "}
-					<b>{current.fromClub}</b> · Fee: <b>{current.fee}</b>
+
+					<div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
+						Bron: <b>{current.source}</b> · Betrouwbaarheid:{" "}
+						<b>{Math.round(current.reliability * 100)}%</b> · Van:{" "}
+						<b>{current.fromClub}</b> · Fee: <b>{current.fee}</b>
+					</div>
 				</div>
 
 				<div style={styles.buttons}>
 					<button
+						disabled={locked}
 						onClick={() => vote("down")}
-						style={{ ...styles.button, ...styles.buttonDown }}
+						style={{
+							...styles.button,
+							...styles.buttonDown,
+							opacity: locked ? 0.6 : 1,
+							cursor: locked ? "not-allowed" : "pointer",
+						}}
 					>
 						👎 Onzin
 					</button>
+
 					<button
+						disabled={locked}
 						onClick={() => vote("up")}
-						style={{ ...styles.button, ...styles.buttonUp }}
+						style={{
+							...styles.button,
+							...styles.buttonUp,
+							opacity: locked ? 0.6 : 1,
+							cursor: locked ? "not-allowed" : "pointer",
+						}}
 					>
 						👍 Geloofwaardig
 					</button>
@@ -218,10 +241,7 @@ const styles = {
 		alignItems: "flex-start",
 		marginBottom: 16,
 	},
-	title: {
-		margin: 0,
-		fontSize: 28,
-	},
+	title: { margin: 0, fontSize: 28 },
 	subtitle: {
 		marginTop: 6,
 		fontSize: 13,
@@ -234,59 +254,36 @@ const styles = {
 		border: "1px solid rgba(255,255,255,0.12)",
 		textAlign: "right",
 	},
-	badgeLabel: {
-		fontSize: 11,
-		color: "rgba(232,238,252,0.7)",
-	},
-	badgeValue: {
-		fontSize: 18,
-		fontWeight: 800,
-	},
+	badgeLabel: { fontSize: 11, color: "rgba(232,238,252,0.7)" },
+	badgeValue: { fontSize: 18, fontWeight: 800 },
 	rumourBox: {
 		borderRadius: 16,
 		padding: 16,
 		background: "rgba(0,0,0,0.3)",
 		border: "1px solid rgba(255,255,255,0.1)",
 	},
-	metaRow: {
-		display: "flex",
-		gap: 8,
-		marginBottom: 14,
-		flexWrap: "wrap",
-	},
+	metaRow: { display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" },
 	pill: {
 		fontSize: 12,
 		padding: "6px 10px",
 		borderRadius: 999,
 		background: "rgba(255,255,255,0.1)",
 	},
-	idText: {
-		marginLeft: "auto",
-		fontSize: 12,
-		color: "rgba(232,238,252,0.6)",
-	},
+	idText: { marginLeft: "auto", fontSize: 12, color: "rgba(232,238,252,0.6)" },
 	questionWrap: {
 		display: "grid",
 		placeItems: "center",
 		minHeight: 110,
 		textAlign: "center",
 	},
-	questionText: {
-		fontSize: 20,
-		fontWeight: 700,
-		maxWidth: 460,
-	},
+	questionText: { fontSize: 20, fontWeight: 700, maxWidth: 460 },
 	helperText: {
 		marginTop: 10,
 		fontSize: 12,
 		color: "rgba(232,238,252,0.6)",
 		textAlign: "center",
 	},
-	buttons: {
-		display: "flex",
-		gap: 12,
-		marginTop: 16,
-	},
+	buttons: { display: "flex", gap: 12, marginTop: 16 },
 	button: {
 		flex: 1,
 		padding: "12px 14px",
@@ -296,22 +293,11 @@ const styles = {
 		border: "1px solid rgba(255,255,255,0.16)",
 		background: "rgba(255,255,255,0.08)",
 		color: "#e8eefc",
-		cursor: "pointer",
 	},
-	buttonDown: {
-		background: "rgba(255,70,70,0.18)",
-	},
-	buttonUp: {
-		background: "rgba(0,255,170,0.18)",
-	},
-	footer: {
-		marginTop: 14,
-		textAlign: "center",
-	},
-	footerText: {
-		fontSize: 12,
-		color: "rgba(232,238,252,0.6)",
-	},
+	buttonDown: { background: "rgba(255,70,70,0.18)" },
+	buttonUp: { background: "rgba(0,255,170,0.18)" },
+	footer: { marginTop: 14, textAlign: "center" },
+	footerText: { fontSize: 12, color: "rgba(232,238,252,0.6)" },
 	code: {
 		padding: "3px 6px",
 		borderRadius: 6,

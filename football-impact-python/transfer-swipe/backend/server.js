@@ -82,6 +82,58 @@ app.get("/stats", (req, res) => {
 
 	res.json({ ok: true, users: Array.from(byUid.values()).slice(0, 200) });
 });
+app.get("/admin/users", (req, res) => {
+	const byUid = new Map();
+
+	for (const e of events) {
+		if (!byUid.has(e.uid)) {
+			byUid.set(e.uid, {
+				uid: e.uid,
+				events: 0,
+				votes: 0,
+				up: 0,
+				down: 0,
+				avgDecisionMs: null,
+				clubsSeen: new Set(),
+			});
+		}
+
+		const u = byUid.get(e.uid);
+		u.events += 1;
+
+		if (e.club) u.clubsSeen.add(e.club);
+
+		if (e.type === "vote" && typeof e.decisionMs === "number") {
+			u.votes += 1;
+			if (e.value === "up") u.up += 1;
+			if (e.value === "down") u.down += 1;
+
+			const prev = u.avgDecisionMs ?? 0;
+			u.avgDecisionMs = Math.round(
+				(prev * (u.votes - 1) + e.decisionMs) / u.votes
+			);
+		}
+	}
+
+	const users = Array.from(byUid.values()).map((u) => ({
+		...u,
+		clubsSeen: Array.from(u.clubsSeen),
+	}));
+
+	res.json({ ok: true, count: users.length, users });
+});
+app.get("/admin/events", (req, res) => {
+	const { uid, type, club } = req.query;
+	const limit = Math.min(parseInt(req.query.limit ?? "50", 10) || 50, 500);
+
+	let result = events;
+
+	if (uid) result = result.filter((e) => e.uid === uid);
+	if (type) result = result.filter((e) => e.type === type);
+	if (club) result = result.filter((e) => e.club === club);
+
+	res.json({ ok: true, count: result.length, items: result.slice(0, limit) });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
