@@ -28,17 +28,45 @@ function pickRandom(list) {
 	return list[Math.floor(Math.random() * list.length)];
 }
 
+// subtiele beïnvloeding: soms forceer je topclub
+function pickWithBias(all, topClubName, biasChance = 0.6) {
+	if (!topClubName) return pickRandom(all);
+	const roll = Math.random();
+	if (roll > biasChance) return pickRandom(all);
+
+	const preferred = all.filter((r) => r.club === topClubName);
+	if (preferred.length === 0) return pickRandom(all);
+
+	return pickRandom(preferred);
+}
+
+function chooseTitle(rumour, persona) {
+	if (!rumour) return "";
+	if (persona === "impulsief")
+		return rumour.clickbaitTitle || rumour.neutralTitle;
+	if (persona === "kritisch")
+		return rumour.neutralTitle || rumour.clickbaitTitle;
+
+	// normaal: mix 50/50
+	return Math.random() < 0.5
+		? rumour.neutralTitle
+		: rumour.clickbaitTitle || rumour.neutralTitle;
+}
+
 export default function App() {
 	const uid = getOrCreateUID();
-
 	const allRumours = useMemo(() => rumours, []);
+
+	const [profile, setProfile] = useState(null);
+	const [profileLoading, setProfileLoading] = useState(true);
+
 	const [current, setCurrent] = useState(() => pickRandom(allRumours));
 	const [count, setCount] = useState(0);
 	const [events, setEvents] = useState([]);
-	const [locked, setLocked] = useState(false); // ✅ voorkomt dubbel klikken
+
 	const shownAtRef = useRef(Date.now());
 
-	// 1) session_start (1x bij openen)
+	// 1) session_start (1x)
 	useEffect(() => {
 		sendEvent({
 			uid,
@@ -49,7 +77,39 @@ export default function App() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// 2) rumor_shown (telkens als current verandert)
+	// 2) profiel ophalen
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadProfile() {
+			try {
+				setProfileLoading(true);
+				const res = await fetch(`${API_BASE}/profile/${uid}`);
+				const data = await res.json();
+				if (!cancelled) setProfile(data.ok ? data : null);
+			} catch (e) {
+				if (!cancelled) setProfile(null);
+			} finally {
+				if (!cancelled) setProfileLoading(false);
+			}
+		}
+
+		loadProfile();
+		return () => {
+			cancelled = true;
+		};
+	}, [uid]);
+
+	// topclub uit profiel
+	const topClub =
+		profile?.topClubsSeen && profile.topClubsSeen.length > 0
+			? profile.topClubsSeen[0].name
+			: null;
+
+	// persona uit profiel
+	const persona = profile?.persona || "onbekend";
+
+	// 3) rumor_shown (telkens current verandert)
 	useEffect(() => {
 		shownAtRef.current = Date.now();
 
@@ -64,14 +124,10 @@ export default function App() {
 		});
 	}, [current, uid]);
 
-	// 3) vote (bij klikken)
+	// 4) vote
 	function vote(value) {
-		// ✅ anti dubbelklik
-		if (locked) return;
-		setLocked(true);
-
 		const rawMs = Date.now() - shownAtRef.current;
-		const decisionMs = Math.min(rawMs, 60000); // max 60s
+		const decisionMs = Math.min(rawMs, 60000); // cap 60s
 
 		const event = {
 			uid,
@@ -85,21 +141,29 @@ export default function App() {
 			decisionMs,
 		};
 
+		// UI + debug
 		console.log("VOTE", event);
-
-		// live lijstje in UI
-		setEvents((prev) => [event, ...prev].slice(0, 5));
+		setEvents((prev) => [event, ...prev].slice(0, 6));
 		setCount((c) => c + 1);
 
-		// stuur naar backend
+		// naar backend
 		sendEvent(event);
 
-		// volgende rumor
-		setCurrent(pickRandom(allRumours));
+		// volgende rumor: bias naar topclub
+		const next = pickWithBias(allRumours, topClub, 0.65);
+		setCurrent(next);
 
-		// ✅ unlock na korte tijd
-		setTimeout(() => setLocked(false), 350);
+		// profiel refresher (optioneel, maar handig)
+		// heel light: om de 3 votes refresh
+		if ((count + 1) % 3 === 0) {
+			fetch(`${API_BASE}/profile/${uid}`)
+				.then((r) => r.json())
+				.then((d) => d.ok && setProfile(d))
+				.catch(() => {});
+		}
 	}
+
+	const titleToShow = chooseTitle(current, persona);
 
 	return (
 		<div style={styles.page}>
@@ -108,6 +172,24 @@ export default function App() {
 					<div>
 						<h1 style={styles.title}>Transfer Swipe</h1>
 						<p style={styles.subtitle}>👍 = geloofwaardig · 👎 = onzin</p>
+
+						<div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
+							{profileLoading ? (
+								<span>Profiel laden…</span>
+							) : profile ? (
+								<span>
+									Persona: <b>{persona}</b>
+									{topClub ? (
+										<>
+											{" "}
+											· Topclub: <b>{topClub}</b>
+										</>
+									) : null}
+								</span>
+							) : (
+								<span>Geen profiel (backend offline?)</span>
+							)}
+						</div>
 					</div>
 
 					<div style={styles.badge}>
@@ -124,51 +206,38 @@ export default function App() {
 					</div>
 
 					<div style={styles.questionWrap}>
-						<div style={styles.questionText}>{current.neutralTitle}</div>
+						<div style={styles.questionText}>{titleToShow}</div>
 					</div>
 
 					<p style={styles.helperText}>
-						Je beslissingstijd wordt gemeten om een gebruikersprofiel op te
-						bouwen.
+						Deze app past de headlines subtiel aan op basis van jouw gedrag
+						(beslissingstijd + like/dislike).
 					</p>
+				</div>
 
-					<div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
-						Bron: <b>{current.source}</b> · Betrouwbaarheid:{" "}
-						<b>{Math.round(current.reliability * 100)}%</b> · Van:{" "}
-						<b>{current.fromClub}</b> · Fee: <b>{current.fee}</b>
-					</div>
+				<div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
+					Bron: <b>{current.source}</b> · Betrouwbaarheid:{" "}
+					<b>{Math.round(current.reliability * 100)}%</b> · Van:{" "}
+					<b>{current.fromClub}</b> · Fee: <b>{current.fee}</b>
 				</div>
 
 				<div style={styles.buttons}>
 					<button
-						disabled={locked}
 						onClick={() => vote("down")}
-						style={{
-							...styles.button,
-							...styles.buttonDown,
-							opacity: locked ? 0.6 : 1,
-							cursor: locked ? "not-allowed" : "pointer",
-						}}
+						style={{ ...styles.button, ...styles.buttonDown }}
 					>
 						👎 Onzin
 					</button>
-
 					<button
-						disabled={locked}
 						onClick={() => vote("up")}
-						style={{
-							...styles.button,
-							...styles.buttonUp,
-							opacity: locked ? 0.6 : 1,
-							cursor: locked ? "not-allowed" : "pointer",
-						}}
+						style={{ ...styles.button, ...styles.buttonUp }}
 					>
 						👍 Geloofwaardig
 					</button>
 				</div>
 
 				<div style={{ marginTop: 18 }}>
-					<h3 style={{ fontSize: 14, marginBottom: 6, opacity: 0.8 }}>
+					<h3 style={{ fontSize: 14, marginBottom: 6, opacity: 0.85 }}>
 						Laatste acties
 					</h3>
 
@@ -183,22 +252,19 @@ export default function App() {
 							key={i}
 							style={{
 								fontSize: 12,
-								padding: "6px 8px",
-								marginBottom: 4,
-								borderRadius: 8,
+								padding: "7px 10px",
+								marginBottom: 6,
+								borderRadius: 10,
 								background: "rgba(255,255,255,0.06)",
 								display: "flex",
 								justifyContent: "space-between",
+								alignItems: "center",
 							}}
 						>
 							<span>
-								{e.type === "vote"
-									? `${e.value === "up" ? "👍" : "👎"} ${e.club}`
-									: `📌 ${e.type}`}
+								{e.value === "up" ? "👍" : "👎"} {e.club}
 							</span>
-							<span>
-								{e.decisionMs !== undefined ? `${e.decisionMs} ms` : ""}
-							</span>
+							<span style={{ opacity: 0.75 }}>{e.decisionMs} ms</span>
 						</div>
 					))}
 				</div>
@@ -227,7 +293,7 @@ const styles = {
 	},
 	card: {
 		width: "100%",
-		maxWidth: 560,
+		maxWidth: 600,
 		borderRadius: 18,
 		padding: 20,
 		background: "rgba(255,255,255,0.06)",
@@ -240,12 +306,16 @@ const styles = {
 		justifyContent: "space-between",
 		alignItems: "flex-start",
 		marginBottom: 16,
+		gap: 12,
 	},
-	title: { margin: 0, fontSize: 28 },
+	title: {
+		margin: 0,
+		fontSize: 28,
+	},
 	subtitle: {
 		marginTop: 6,
 		fontSize: 13,
-		color: "rgba(232,238,252,0.7)",
+		color: "rgba(232,238,252,0.75)",
 	},
 	badge: {
 		padding: "10px 14px",
@@ -253,51 +323,89 @@ const styles = {
 		background: "rgba(255,255,255,0.08)",
 		border: "1px solid rgba(255,255,255,0.12)",
 		textAlign: "right",
+		minWidth: 86,
 	},
-	badgeLabel: { fontSize: 11, color: "rgba(232,238,252,0.7)" },
-	badgeValue: { fontSize: 18, fontWeight: 800 },
+	badgeLabel: {
+		fontSize: 11,
+		color: "rgba(232,238,252,0.7)",
+	},
+	badgeValue: {
+		fontSize: 18,
+		fontWeight: 800,
+	},
 	rumourBox: {
 		borderRadius: 16,
 		padding: 16,
 		background: "rgba(0,0,0,0.3)",
 		border: "1px solid rgba(255,255,255,0.1)",
 	},
-	metaRow: { display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" },
+	metaRow: {
+		display: "flex",
+		gap: 8,
+		marginBottom: 14,
+		flexWrap: "wrap",
+		alignItems: "center",
+	},
 	pill: {
 		fontSize: 12,
 		padding: "6px 10px",
 		borderRadius: 999,
 		background: "rgba(255,255,255,0.1)",
 	},
-	idText: { marginLeft: "auto", fontSize: 12, color: "rgba(232,238,252,0.6)" },
+	idText: {
+		marginLeft: "auto",
+		fontSize: 12,
+		color: "rgba(232,238,252,0.6)",
+	},
 	questionWrap: {
 		display: "grid",
 		placeItems: "center",
-		minHeight: 110,
+		minHeight: 120,
 		textAlign: "center",
+		padding: "6px 8px",
 	},
-	questionText: { fontSize: 20, fontWeight: 700, maxWidth: 460 },
+	questionText: {
+		fontSize: 20,
+		fontWeight: 800,
+		maxWidth: 520,
+		lineHeight: 1.25,
+	},
 	helperText: {
 		marginTop: 10,
 		fontSize: 12,
-		color: "rgba(232,238,252,0.6)",
+		color: "rgba(232,238,252,0.65)",
 		textAlign: "center",
 	},
-	buttons: { display: "flex", gap: 12, marginTop: 16 },
+	buttons: {
+		display: "flex",
+		gap: 12,
+		marginTop: 16,
+	},
 	button: {
 		flex: 1,
 		padding: "12px 14px",
 		borderRadius: 14,
 		fontSize: 16,
-		fontWeight: 700,
+		fontWeight: 800,
 		border: "1px solid rgba(255,255,255,0.16)",
 		background: "rgba(255,255,255,0.08)",
 		color: "#e8eefc",
+		cursor: "pointer",
 	},
-	buttonDown: { background: "rgba(255,70,70,0.18)" },
-	buttonUp: { background: "rgba(0,255,170,0.18)" },
-	footer: { marginTop: 14, textAlign: "center" },
-	footerText: { fontSize: 12, color: "rgba(232,238,252,0.6)" },
+	buttonDown: {
+		background: "rgba(255,70,70,0.18)",
+	},
+	buttonUp: {
+		background: "rgba(0,255,170,0.18)",
+	},
+	footer: {
+		marginTop: 14,
+		textAlign: "center",
+	},
+	footerText: {
+		fontSize: 12,
+		color: "rgba(232,238,252,0.6)",
+	},
 	code: {
 		padding: "3px 6px",
 		borderRadius: 6,
