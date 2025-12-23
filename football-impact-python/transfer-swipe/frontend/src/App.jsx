@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import rumours from "./data/rumours.json";
+const API_BASE = "http://localhost:3000";
 
 function getOrCreateUID() {
 	let uid = localStorage.getItem("uid");
@@ -27,24 +28,38 @@ export default function App() {
 		shownAtRef.current = Date.now();
 	}, [current]);
 
-	function vote(value) {
+	async function vote(value) {
 		const decisionMs = Date.now() - shownAtRef.current;
 
 		const event = {
 			uid,
+			type: "vote",
+			ts: new Date().toISOString(),
 			id: current.id,
 			club: current.club,
 			league: current.league,
 			value,
 			decisionMs,
-			ts: new Date().toISOString(),
 		};
 
+		// blijft handig voor debug
 		console.log("VOTE", event);
 
+		// live lijstje in UI (als je dat hebt)
 		setEvents((prev) => [event, ...prev].slice(0, 5));
 		setCount((c) => c + 1);
 		setCurrent(pickRandom(allRumours));
+
+		// stuur naar backend (fire-and-forget)
+		try {
+			await fetch(`${API_BASE}/events`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(event),
+			});
+		} catch (err) {
+			console.warn("Kon event niet versturen naar backend:", err);
+		}
 	}
 
 	return (
