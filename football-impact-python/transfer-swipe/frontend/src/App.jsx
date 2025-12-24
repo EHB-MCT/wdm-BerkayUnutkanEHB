@@ -29,10 +29,9 @@ function pickRandom(list) {
 }
 
 // subtiele beïnvloeding: soms forceer je topclub
-function pickWithBias(all, topClubName, biasChance = 0.6) {
+function pickWithBias(all, topClubName, biasChance = 0.65) {
 	if (!topClubName) return pickRandom(all);
-	const roll = Math.random();
-	if (roll > biasChance) return pickRandom(all);
+	if (Math.random() > biasChance) return pickRandom(all);
 
 	const preferred = all.filter((r) => r.club === topClubName);
 	if (preferred.length === 0) return pickRandom(all);
@@ -42,12 +41,14 @@ function pickWithBias(all, topClubName, biasChance = 0.6) {
 
 function chooseTitle(rumour, persona) {
 	if (!rumour) return "";
-	if (persona === "impulsief")
-		return rumour.clickbaitTitle || rumour.neutralTitle;
+
+	// persona gebaseerd op votes
 	if (persona === "kritisch")
 		return rumour.neutralTitle || rumour.clickbaitTitle;
+	if (persona === "goedgelovig")
+		return rumour.clickbaitTitle || rumour.neutralTitle;
 
-	// normaal: mix 50/50
+	// neutraal: mix 50/50
 	return Math.random() < 0.5
 		? rumour.neutralTitle
 		: rumour.clickbaitTitle || rumour.neutralTitle;
@@ -66,7 +67,7 @@ export default function App() {
 
 	const shownAtRef = useRef(Date.now());
 
-	// 1) session_start (1x)
+	// 1) session_start (1x bij openen)
 	useEffect(() => {
 		sendEvent({
 			uid,
@@ -77,7 +78,7 @@ export default function App() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// 2) profiel ophalen
+	// 2) profiel ophalen (1x en af en toe refresh)
 	useEffect(() => {
 		let cancelled = false;
 
@@ -86,7 +87,7 @@ export default function App() {
 				setProfileLoading(true);
 				const res = await fetch(`${API_BASE}/profile/${uid}`);
 				const data = await res.json();
-				if (!cancelled) setProfile(data.ok ? data : null);
+				if (!cancelled) setProfile(data?.ok ? data : null);
 			} catch (e) {
 				if (!cancelled) setProfile(null);
 			} finally {
@@ -100,14 +101,12 @@ export default function App() {
 		};
 	}, [uid]);
 
-	// topclub uit profiel
+	// topclub en persona uit profiel
 	const topClub =
-		profile?.topClubsSeen && profile.topClubsSeen.length > 0
-			? profile.topClubsSeen[0].name
-			: null;
+		profile?.topClubsSeen?.length > 0 ? profile.topClubsSeen[0].name : null;
 
-	// persona uit profiel
-	const persona = profile?.persona || "onbekend";
+	const persona = profile?.persona || "neutraal";
+	const titleToShow = chooseTitle(current, persona);
 
 	// 3) rumor_shown (telkens current verandert)
 	useEffect(() => {
@@ -124,7 +123,7 @@ export default function App() {
 		});
 	}, [current, uid]);
 
-	// 4) vote
+	// 4) vote (bij klikken)
 	function vote(value) {
 		const rawMs = Date.now() - shownAtRef.current;
 		const decisionMs = Math.min(rawMs, 60000); // cap 60s
@@ -141,29 +140,26 @@ export default function App() {
 			decisionMs,
 		};
 
-		// UI + debug
 		console.log("VOTE", event);
+
 		setEvents((prev) => [event, ...prev].slice(0, 6));
 		setCount((c) => c + 1);
 
-		// naar backend
+		// stuur naar backend
 		sendEvent(event);
 
 		// volgende rumor: bias naar topclub
 		const next = pickWithBias(allRumours, topClub, 0.65);
 		setCurrent(next);
 
-		// profiel refresher (optioneel, maar handig)
-		// heel light: om de 3 votes refresh
+		// profiel refresher: elke 3 votes
 		if ((count + 1) % 3 === 0) {
 			fetch(`${API_BASE}/profile/${uid}`)
 				.then((r) => r.json())
-				.then((d) => d.ok && setProfile(d))
+				.then((d) => d?.ok && setProfile(d))
 				.catch(() => {});
 		}
 	}
-
-	const titleToShow = chooseTitle(current, persona);
 
 	return (
 		<div style={styles.page}>
@@ -210,8 +206,11 @@ export default function App() {
 					</div>
 
 					<p style={styles.helperText}>
-						Deze app past de headlines subtiel aan op basis van jouw gedrag
-						(beslissingstijd + like/dislike).
+						{persona === "kritisch" &&
+							"Je lijkt vaak sceptisch. Klopt dit wel?"}
+						{persona === "goedgelovig" &&
+							"Je vertrouwt transfers snel. Volg je gevoel."}
+						{persona === "neutraal" && "Neem rustig je beslissing."}
 					</p>
 				</div>
 
@@ -308,15 +307,8 @@ const styles = {
 		marginBottom: 16,
 		gap: 12,
 	},
-	title: {
-		margin: 0,
-		fontSize: 28,
-	},
-	subtitle: {
-		marginTop: 6,
-		fontSize: 13,
-		color: "rgba(232,238,252,0.75)",
-	},
+	title: { margin: 0, fontSize: 28 },
+	subtitle: { marginTop: 6, fontSize: 13, color: "rgba(232,238,252,0.75)" },
 	badge: {
 		padding: "10px 14px",
 		borderRadius: 14,
@@ -325,14 +317,8 @@ const styles = {
 		textAlign: "right",
 		minWidth: 86,
 	},
-	badgeLabel: {
-		fontSize: 11,
-		color: "rgba(232,238,252,0.7)",
-	},
-	badgeValue: {
-		fontSize: 18,
-		fontWeight: 800,
-	},
+	badgeLabel: { fontSize: 11, color: "rgba(232,238,252,0.7)" },
+	badgeValue: { fontSize: 18, fontWeight: 800 },
 	rumourBox: {
 		borderRadius: 16,
 		padding: 16,
@@ -352,11 +338,7 @@ const styles = {
 		borderRadius: 999,
 		background: "rgba(255,255,255,0.1)",
 	},
-	idText: {
-		marginLeft: "auto",
-		fontSize: 12,
-		color: "rgba(232,238,252,0.6)",
-	},
+	idText: { marginLeft: "auto", fontSize: 12, color: "rgba(232,238,252,0.6)" },
 	questionWrap: {
 		display: "grid",
 		placeItems: "center",
@@ -376,11 +358,7 @@ const styles = {
 		color: "rgba(232,238,252,0.65)",
 		textAlign: "center",
 	},
-	buttons: {
-		display: "flex",
-		gap: 12,
-		marginTop: 16,
-	},
+	buttons: { display: "flex", gap: 12, marginTop: 16 },
 	button: {
 		flex: 1,
 		padding: "12px 14px",
@@ -392,20 +370,10 @@ const styles = {
 		color: "#e8eefc",
 		cursor: "pointer",
 	},
-	buttonDown: {
-		background: "rgba(255,70,70,0.18)",
-	},
-	buttonUp: {
-		background: "rgba(0,255,170,0.18)",
-	},
-	footer: {
-		marginTop: 14,
-		textAlign: "center",
-	},
-	footerText: {
-		fontSize: 12,
-		color: "rgba(232,238,252,0.6)",
-	},
+	buttonDown: { background: "rgba(255,70,70,0.18)" },
+	buttonUp: { background: "rgba(0,255,170,0.18)" },
+	footer: { marginTop: 14, textAlign: "center" },
+	footerText: { fontSize: 12, color: "rgba(232,238,252,0.6)" },
 	code: {
 		padding: "3px 6px",
 		borderRadius: 6,
