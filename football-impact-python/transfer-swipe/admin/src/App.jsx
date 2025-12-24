@@ -1,268 +1,299 @@
 import { useEffect, useMemo, useState } from "react";
-import "./App.css";
 
-const API_BASE = "http://localhost:3000";
-
-async function fetchJson(path) {
-	const res = await fetch(`${API_BASE}${path}`);
-	if (!res.ok) throw new Error(`HTTP ${res.status}`);
-	return res.json();
-}
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 function fmtMs(ms) {
-	if (ms === null || ms === undefined) return "—";
+	if (ms == null) return "-";
 	if (ms < 1000) return `${ms} ms`;
 	return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function pct(n) {
+	return `${Math.round(n)}%`;
 }
 
 export default function App() {
 	const [users, setUsers] = useState([]);
 	const [events, setEvents] = useState([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState("");
 
-	const [selectedUid, setSelectedUid] = useState("");
-	const [typeFilter, setTypeFilter] = useState("all");
-	const [limit, setLimit] = useState(50);
+	const [uid, setUid] = useState("all");
+	const [type, setType] = useState("all");
+	const [club, setClub] = useState("");
+
+	const [loading, setLoading] = useState(false);
+	const [err, setErr] = useState("");
 
 	async function loadAll() {
 		setLoading(true);
-		setError("");
+		setErr("");
 		try {
-			const u = await fetchJson("/admin/users");
-			setUsers(u.users ?? []);
+			const [uRes, eRes] = await Promise.all([
+				fetch(`${API_BASE}/admin/users`),
+				fetch(`${API_BASE}/admin/events?limit=500`),
+			]);
 
-			// init: kies eerste user als er 1 is
-			if (!selectedUid && (u.users ?? []).length > 0) {
-				setSelectedUid(u.users[0].uid);
-			}
+			const uJson = await uRes.json();
+			const eJson = await eRes.json();
 
-			const q = new URLSearchParams();
-			q.set("limit", String(limit));
-			if (selectedUid) q.set("uid", selectedUid);
-			if (typeFilter !== "all") q.set("type", typeFilter);
+			if (!uRes.ok || uJson.ok === false)
+				throw new Error("Users ophalen faalde");
+			if (!eRes.ok || eJson.ok === false)
+				throw new Error("Events ophalen faalde");
 
-			const e = await fetchJson(`/admin/events?${q.toString()}`);
-			setEvents(e.items ?? []);
-		} catch (err) {
-			setError(String(err?.message ?? err));
+			setUsers(uJson.users || []);
+			setEvents(eJson.items || []);
+		} catch (e) {
+			setErr(e?.message || "Onbekende fout");
 		} finally {
 			setLoading(false);
 		}
 	}
 
-	// Reload bij filters
 	useEffect(() => {
 		loadAll();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedUid, typeFilter, limit]);
+	}, []);
+
+	const typeOptions = useMemo(() => {
+		const s = new Set(events.map((e) => e.type).filter(Boolean));
+		return ["all", ...Array.from(s).sort()];
+	}, [events]);
+
+	const userOptions = useMemo(() => {
+		const list = (users || []).map((u) => u.uid).filter(Boolean);
+		return ["all", ...list.sort()];
+	}, [users]);
+
+	const filtered = useMemo(() => {
+		const clubQ = club.trim().toLowerCase();
+		return events.filter((e) => {
+			if (uid !== "all" && e.uid !== uid) return false;
+			if (type !== "all" && e.type !== type) return false;
+			if (clubQ) {
+				const c = (e.club || "").toLowerCase();
+				if (!c.includes(clubQ)) return false;
+			}
+			return true;
+		});
+	}, [events, uid, type, club]);
+
+	const counters = useMemo(() => {
+		let total = filtered.length;
+		let votes = 0;
+		let sessionStarts = 0;
+		let rumorShown = 0;
+
+		let up = 0;
+		let down = 0;
+
+		let decisionSum = 0;
+		let decisionCount = 0;
+
+		for (const e of filtered) {
+			if (e.type === "vote") {
+				votes++;
+				if (e.value === "up") up++;
+				if (e.value === "down") down++;
+				if (typeof e.decisionMs === "number") {
+					decisionSum += e.decisionMs;
+					decisionCount++;
+				}
+			}
+			if (e.type === "session_start") sessionStarts++;
+			if (e.type === "rumor_shown") rumorShown++;
+		}
+
+		const avgDecisionMs = decisionCount
+			? Math.round(decisionSum / decisionCount)
+			: null;
+		const upRate = votes ? (up / votes) * 100 : 0;
+
+		return {
+			total,
+			votes,
+			sessionStarts,
+			rumorShown,
+			up,
+			down,
+			upRate,
+			avgDecisionMs,
+		};
+	}, [filtered]);
 
 	const selectedUser = useMemo(() => {
-		return users.find((u) => u.uid === selectedUid) ?? null;
-	}, [users, selectedUid]);
+		if (uid === "all") return null;
+		return users.find((u) => u.uid === uid) || null;
+	}, [users, uid]);
 
 	return (
-		<div style={styles.page}>
-			<div style={styles.topbar}>
-				<div>
-					<h1 style={styles.h1}>Admin Dashboard</h1>
-					<p style={styles.sub}>
-						Live data uit MongoDB via backend: <code>/admin/users</code> &{" "}
-						<code>/admin/events</code>
-					</p>
+		<div className="page">
+			<div className="topbar">
+				<div className="brand">
+					<div className="title">Transfer Swipe — Admin</div>
+					<div className="subtitle">
+						Data uit <code>{API_BASE}</code>
+					</div>
 				</div>
-				<button onClick={loadAll} style={styles.refreshBtn}>
-					↻ Refresh
-				</button>
+
+				<div className="actions">
+					<button onClick={loadAll} disabled={loading}>
+						{loading ? "Laden..." : "↻ Refresh"}
+					</button>
+				</div>
 			</div>
 
-			{error && (
-				<div style={styles.errorBox}>
-					<b>Fout:</b> {error} <br />
-					Check: draait backend op <code>http://localhost:3000</code>?
+			{err && (
+				<div className="alert">
+					<b>Fout:</b> {err}
 				</div>
 			)}
 
-			<div style={styles.grid}>
-				{/* Left: Users */}
-				<div style={styles.card}>
-					<div style={styles.cardHeader}>
-						<h2 style={styles.h2}>Gebruikers</h2>
-						<span style={styles.badge}>{users.length}</span>
+			<div className="grid">
+				{/* Filters */}
+				<div className="card">
+					<div className="cardTitle">Filters</div>
+
+					<div className="row">
+						<label>Gebruiker (uid)</label>
+						<select value={uid} onChange={(e) => setUid(e.target.value)}>
+							{userOptions.map((u) => (
+								<option key={u} value={u}>
+									{u === "all" ? "Alle users" : u}
+								</option>
+							))}
+						</select>
 					</div>
 
-					{loading && users.length === 0 ? (
-						<p style={styles.muted}>Loading…</p>
-					) : users.length === 0 ? (
-						<p style={styles.muted}>
-							Geen users gevonden. Swipe eens in de user-app.
-						</p>
-					) : (
-						<div style={styles.userList}>
-							{users.map((u) => (
-								<button
-									key={u.uid}
-									onClick={() => setSelectedUid(u.uid)}
-									style={{
-										...styles.userRow,
-										...(u.uid === selectedUid ? styles.userRowActive : {}),
-									}}
-								>
-									<div
-										style={{ display: "flex", justifyContent: "space-between" }}
-									>
-										<div style={styles.uidShort}>{u.uid.slice(0, 8)}…</div>
-										<div style={styles.smallPill}>{u.votes ?? 0} votes</div>
-									</div>
-
-									<div style={styles.userMeta}>
-										<span>
-											Up: <b>{u.up ?? 0}</b>
-										</span>
-										<span>
-											Down: <b>{u.down ?? 0}</b>
-										</span>
-										<span>
-											Avg: <b>{fmtMs(u.avgDecisionMs)}</b>
-										</span>
-									</div>
-
-									{u.clubsSeen?.length ? (
-										<div style={styles.tagsWrap}>
-											{u.clubsSeen.slice(0, 3).map((c) => (
-												<span key={c} style={styles.tag}>
-													{c}
-												</span>
-											))}
-											{u.clubsSeen.length > 3 && (
-												<span style={styles.tagMuted}>
-													+{u.clubsSeen.length - 3}
-												</span>
-											)}
-										</div>
-									) : null}
-								</button>
+					<div className="row">
+						<label>Event type</label>
+						<select value={type} onChange={(e) => setType(e.target.value)}>
+							{typeOptions.map((t) => (
+								<option key={t} value={t}>
+									{t === "all" ? "Alle types" : t}
+								</option>
 							))}
-						</div>
-					)}
+						</select>
+					</div>
+
+					<div className="row">
+						<label>Club (contains)</label>
+						<input
+							value={club}
+							onChange={(e) => setClub(e.target.value)}
+							placeholder="bv. Fenerbahçe"
+						/>
+					</div>
+
+					<div className="hint">
+						Tip: kies eerst een uid → je ziet meteen gedrag + events voor die
+						gebruiker.
+					</div>
 				</div>
 
-				{/* Right: Events + filters */}
-				<div style={styles.card}>
-					<div style={styles.cardHeader}>
-						<h2 style={styles.h2}>Events</h2>
-						<span style={styles.badge}>{events.length}</span>
-					</div>
+				{/* Counters */}
+				<div className="card">
+					<div className="cardTitle">Counters (na filters)</div>
 
-					<div style={styles.filters}>
-						<div style={styles.filterItem}>
-							<label style={styles.label}>UID</label>
-							<select
-								value={selectedUid}
-								onChange={(e) => setSelectedUid(e.target.value)}
-								style={styles.select}
-							>
-								{users.map((u) => (
-									<option key={u.uid} value={u.uid}>
-										{u.uid.slice(0, 8)}…
-									</option>
-								))}
-								{users.length === 0 && <option value="">(geen users)</option>}
-							</select>
+					<div className="stats">
+						<div className="stat">
+							<div className="k">Totaal events</div>
+							<div className="v">{counters.total}</div>
 						</div>
-
-						<div style={styles.filterItem}>
-							<label style={styles.label}>Type</label>
-							<select
-								value={typeFilter}
-								onChange={(e) => setTypeFilter(e.target.value)}
-								style={styles.select}
-							>
-								<option value="all">all</option>
-								<option value="session_start">session_start</option>
-								<option value="rumor_shown">rumor_shown</option>
-								<option value="vote">vote</option>
-							</select>
+						<div className="stat">
+							<div className="k">Votes</div>
+							<div className="v">{counters.votes}</div>
 						</div>
-
-						<div style={styles.filterItem}>
-							<label style={styles.label}>Limit</label>
-							<select
-								value={limit}
-								onChange={(e) => setLimit(Number(e.target.value))}
-								style={styles.select}
-							>
-								<option value={20}>20</option>
-								<option value={50}>50</option>
-								<option value={100}>100</option>
-								<option value={200}>200</option>
-							</select>
+						<div className="stat">
+							<div className="k">Session starts</div>
+							<div className="v">{counters.sessionStarts}</div>
+						</div>
+						<div className="stat">
+							<div className="k">Rumor shown</div>
+							<div className="v">{counters.rumorShown}</div>
+						</div>
+						<div className="stat">
+							<div className="k">Up / Down</div>
+							<div className="v">
+								{counters.up} / {counters.down} ({pct(counters.upRate)})
+							</div>
+						</div>
+						<div className="stat">
+							<div className="k">Gem. decision</div>
+							<div className="v">{fmtMs(counters.avgDecisionMs)}</div>
 						</div>
 					</div>
 
 					{selectedUser && (
-						<div style={styles.profileBox}>
-							<div style={{ display: "flex", justifyContent: "space-between" }}>
-								<div style={{ fontWeight: 800 }}>
-									User: {selectedUser.uid.slice(0, 12)}…
-								</div>
-								<div style={styles.smallPill}>
-									events: {selectedUser.events ?? 0}
-								</div>
+						<div className="userBox">
+							<div className="userTitle">Geselecteerde user</div>
+							<div className="userLine">
+								<span className="muted">uid</span>
+								<code>{selectedUser.uid}</code>
 							</div>
-							<div style={styles.profileGrid}>
-								<div>
-									<div style={styles.k}>Votes</div>
-									<div style={styles.v}>{selectedUser.votes ?? 0}</div>
-								</div>
-								<div>
-									<div style={styles.k}>Up / Down</div>
-									<div style={styles.v}>
-										{selectedUser.up ?? 0} / {selectedUser.down ?? 0}
-									</div>
-								</div>
-								<div>
-									<div style={styles.k}>Avg Decision</div>
-									<div style={styles.v}>
-										{fmtMs(selectedUser.avgDecisionMs)}
-									</div>
-								</div>
+							<div className="userLine">
+								<span className="muted">clubsSeen</span>
+								<span>{(selectedUser.clubsSeen || []).join(", ") || "-"}</span>
+							</div>
+							<div className="userLine">
+								<span className="muted">votes</span>
+								<span>{selectedUser.votes}</span>
+							</div>
+							<div className="userLine">
+								<span className="muted">avgDecisionMs</span>
+								<span>
+									{selectedUser.avgDecisionMs != null
+										? fmtMs(selectedUser.avgDecisionMs)
+										: "-"}
+								</span>
 							</div>
 						</div>
 					)}
+				</div>
 
-					<div style={styles.tableWrap}>
-						<table style={styles.table}>
+				{/* Events table */}
+				<div className="card span2">
+					<div className="cardTitle">
+						Events ({filtered.length})
+						<span className="muted" style={{ marginLeft: 10 }}>
+							(nieuwste bovenaan)
+						</span>
+					</div>
+
+					<div className="tableWrap">
+						<table>
 							<thead>
 								<tr>
-									<th style={styles.th}>ts</th>
-									<th style={styles.th}>type</th>
-									<th style={styles.th}>club</th>
-									<th style={styles.th}>value</th>
-									<th style={styles.th}>decision</th>
+									<th>ts</th>
+									<th>type</th>
+									<th>uid</th>
+									<th>club</th>
+									<th>rumor</th>
+									<th>value</th>
+									<th>decision</th>
 								</tr>
 							</thead>
 							<tbody>
-								{events.map((e, idx) => (
-									<tr key={idx} style={styles.tr}>
-										<td style={styles.td}>
-											{String(e.ts ?? "")
-												.replace("T", " ")
-												.replace("Z", "")}
+								{filtered.slice(0, 200).map((e) => (
+									<tr key={e._id || `${e.ts}-${e.type}-${Math.random()}`}>
+										<td className="mono">{e.ts || "-"}</td>
+										<td>
+											<span className={`pill ${e.type || ""}`}>
+												{e.type || "-"}
+											</span>
 										</td>
-										<td style={styles.td}>
-											<span style={styles.typePill}>{e.type}</span>
+										<td className="mono">{(e.uid || "").slice(0, 8)}…</td>
+										<td>{e.club || "-"}</td>
+										<td className="mono">{e.id || "-"}</td>
+										<td className="mono">{e.value || "-"}</td>
+										<td className="mono">
+											{e.decisionMs != null ? fmtMs(e.decisionMs) : "-"}
 										</td>
-										<td style={styles.td}>{e.club ?? "—"}</td>
-										<td style={styles.td}>{e.value ?? "—"}</td>
-										<td style={styles.td}>{fmtMs(e.decisionMs)}</td>
 									</tr>
 								))}
-								{!loading && events.length === 0 && (
+								{filtered.length === 0 && (
 									<tr>
-										<td style={styles.td} colSpan={5}>
-											Geen events (filter te strikt?) — probeer Type=all of
-											swipe in de user-app.
+										<td colSpan="7" className="muted">
+											Geen events voor deze filters.
 										</td>
 									</tr>
 								)}
@@ -270,175 +301,18 @@ export default function App() {
 						</table>
 					</div>
 
-					<div style={styles.footerNote}>
-						Tip: als je “0 events” ziet, swipe in de user-app en druk op
-						Refresh.
+					<div className="hint" style={{ marginTop: 10 }}>
+						Toont max 200 rows (performance). Gebruik filters om te focussen.
 					</div>
 				</div>
+			</div>
+
+			<div className="footer">
+				<span className="muted">
+					Als je niets ziet: check backend <code>/admin/events</code> en of je
+					frontend wel events post naar <code>/events</code>.
+				</span>
 			</div>
 		</div>
 	);
 }
-
-const styles = {
-	page: {
-		minHeight: "100vh",
-		padding: 20,
-		background:
-			"radial-gradient(1200px 700px at 20% 10%, rgba(0,255,170,0.14), transparent 60%), radial-gradient(1200px 700px at 85% 25%, rgba(0,145,255,0.14), transparent 55%), #0b0f17",
-		color: "#e8eefc",
-		fontFamily:
-			"ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-	},
-	topbar: {
-		display: "flex",
-		justifyContent: "space-between",
-		alignItems: "flex-start",
-		marginBottom: 16,
-	},
-	h1: { margin: 0, fontSize: 28 },
-	sub: { margin: "6px 0 0", opacity: 0.75, fontSize: 13 },
-	refreshBtn: {
-		padding: "10px 14px",
-		borderRadius: 12,
-		border: "1px solid rgba(255,255,255,0.16)",
-		background: "rgba(255,255,255,0.08)",
-		color: "#e8eefc",
-		cursor: "pointer",
-		fontWeight: 700,
-	},
-	errorBox: {
-		marginBottom: 16,
-		padding: 12,
-		borderRadius: 12,
-		background: "rgba(255,70,70,0.14)",
-		border: "1px solid rgba(255,70,70,0.25)",
-	},
-	grid: {
-		display: "grid",
-		gridTemplateColumns: "360px 1fr",
-		gap: 16,
-	},
-	card: {
-		borderRadius: 18,
-		padding: 16,
-		background: "rgba(255,255,255,0.06)",
-		border: "1px solid rgba(255,255,255,0.12)",
-		boxShadow: "0 18px 60px rgba(0,0,0,0.45)",
-		backdropFilter: "blur(10px)",
-	},
-	cardHeader: {
-		display: "flex",
-		justifyContent: "space-between",
-		alignItems: "center",
-		marginBottom: 10,
-	},
-	h2: { margin: 0, fontSize: 18 },
-	badge: {
-		fontSize: 12,
-		padding: "4px 10px",
-		borderRadius: 999,
-		background: "rgba(255,255,255,0.1)",
-		border: "1px solid rgba(255,255,255,0.12)",
-	},
-	muted: { opacity: 0.7, fontSize: 13 },
-	userList: { display: "grid", gap: 8 },
-	userRow: {
-		textAlign: "left",
-		padding: 12,
-		borderRadius: 14,
-		border: "1px solid rgba(255,255,255,0.12)",
-		background: "rgba(0,0,0,0.22)",
-		cursor: "pointer",
-		color: "#e8eefc",
-	},
-	userRowActive: {
-		border: "1px solid rgba(0,255,170,0.35)",
-		background: "rgba(0,255,170,0.08)",
-	},
-	uidShort: { fontWeight: 800, fontSize: 13 },
-	smallPill: {
-		fontSize: 11,
-		padding: "3px 8px",
-		borderRadius: 999,
-		background: "rgba(255,255,255,0.10)",
-		border: "1px solid rgba(255,255,255,0.12)",
-	},
-	userMeta: {
-		marginTop: 8,
-		display: "flex",
-		gap: 10,
-		flexWrap: "wrap",
-		fontSize: 12,
-		opacity: 0.85,
-	},
-	tagsWrap: { marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" },
-	tag: {
-		fontSize: 11,
-		padding: "3px 8px",
-		borderRadius: 999,
-		background: "rgba(0,145,255,0.14)",
-		border: "1px solid rgba(0,145,255,0.20)",
-	},
-	tagMuted: {
-		fontSize: 11,
-		padding: "3px 8px",
-		borderRadius: 999,
-		background: "rgba(255,255,255,0.08)",
-		border: "1px solid rgba(255,255,255,0.12)",
-		opacity: 0.7,
-	},
-	filters: {
-		display: "grid",
-		gridTemplateColumns: "1fr 1fr 120px",
-		gap: 10,
-		marginBottom: 12,
-	},
-	filterItem: { display: "grid", gap: 6 },
-	label: { fontSize: 12, opacity: 0.75 },
-	select: {
-		padding: "10px 10px",
-		borderRadius: 12,
-		border: "1px solid rgba(255,255,255,0.16)",
-		background: "rgba(255,255,255,0.08)",
-		color: "#e8eefc",
-	},
-	profileBox: {
-		marginBottom: 12,
-		padding: 12,
-		borderRadius: 14,
-		background: "rgba(0,0,0,0.22)",
-		border: "1px solid rgba(255,255,255,0.12)",
-	},
-	profileGrid: {
-		marginTop: 10,
-		display: "grid",
-		gridTemplateColumns: "repeat(3, 1fr)",
-		gap: 10,
-	},
-	k: { fontSize: 11, opacity: 0.75 },
-	v: { fontSize: 16, fontWeight: 800 },
-	tableWrap: {
-		borderRadius: 14,
-		overflow: "hidden",
-		border: "1px solid rgba(255,255,255,0.12)",
-		background: "rgba(0,0,0,0.22)",
-	},
-	table: { width: "100%", borderCollapse: "collapse", fontSize: 12 },
-	th: {
-		textAlign: "left",
-		padding: "10px 10px",
-		background: "rgba(255,255,255,0.06)",
-		borderBottom: "1px solid rgba(255,255,255,0.10)",
-	},
-	tr: { borderBottom: "1px solid rgba(255,255,255,0.06)" },
-	td: { padding: "10px 10px", opacity: 0.95 },
-	typePill: {
-		fontSize: 11,
-		padding: "3px 8px",
-		borderRadius: 999,
-		background: "rgba(255,255,255,0.08)",
-		border: "1px solid rgba(255,255,255,0.12)",
-	},
-	footerNote: { marginTop: 10, fontSize: 12, opacity: 0.65 },
-};
