@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import rumours from "./data/rumours.json";
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 async function sendEvent(event) {
 	try {
