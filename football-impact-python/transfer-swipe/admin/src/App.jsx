@@ -8,8 +8,44 @@ function fmtMs(ms) {
 	return `${(ms / 1000).toFixed(1)} s`;
 }
 
-function pct(n) {
+function safePct(n) {
+	if (!Number.isFinite(n)) return "0%";
 	return `${Math.round(n)}%`;
+}
+
+function clamp(n, a, b) {
+	return Math.max(a, Math.min(b, n));
+}
+
+// simpele sparkline svg (geen libs)
+function Sparkline({ data, height = 46 }) {
+	const w = 220;
+	const h = height;
+	const max = Math.max(1, ...data);
+	const pts = data
+		.map((v, i) => {
+			const x = data.length <= 1 ? 0 : (i / (data.length - 1)) * (w - 4) + 2;
+			const y = h - 6 - (v / max) * (h - 12);
+			return `${x.toFixed(1)},${y.toFixed(1)}`;
+		})
+		.join(" ");
+
+	return (
+		<div className="sparkWrap">
+			<svg width={w} height={h} className="spark">
+				<polyline
+					points={pts}
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+				/>
+				<line x1="2" y1={h - 6} x2={w - 2} y2={h - 6} className="sparkBase" />
+			</svg>
+			<div className="sparkMeta">
+				<span className="muted">max</span> <b>{max}</b>
+			</div>
+		</div>
+	);
 }
 
 export default function App() {
@@ -29,7 +65,7 @@ export default function App() {
 		try {
 			const [uRes, eRes] = await Promise.all([
 				fetch(`${API_BASE}/admin/users`),
-				fetch(`${API_BASE}/admin/events?limit=500`),
+				fetch(`${API_BASE}/admin/events?limit=1000`),
 			]);
 
 			const uJson = await uRes.json();
@@ -42,6 +78,40 @@ export default function App() {
 
 			setUsers(uJson.users || []);
 			setEvents(eJson.items || []);
+		} catch (e) {
+			setErr(e?.message || "Onbekende fout");
+		} finally {
+			setLoading(false);
+		}
+	}
+
+	async function deleteLatest(n = 200) {
+		if (!confirm(`Verwijder laatste ${n} events?`)) return;
+		setLoading(true);
+		setErr("");
+		try {
+			const res = await fetch(`${API_BASE}/admin/events/latest?limit=${n}`, {
+				method: "DELETE",
+			});
+			const json = await res.json();
+			if (!res.ok || json.ok === false) throw new Error("Delete faalde");
+			await loadAll();
+		} catch (e) {
+			setErr(e?.message || "Onbekende fout");
+		} finally {
+			setLoading(false);
+		}
+	}
+
+	async function deleteAll() {
+		if (!confirm("ALLES verwijderen? Dit is niet omkeerbaar.")) return;
+		setLoading(true);
+		setErr("");
+		try {
+			const res = await fetch(`${API_BASE}/admin/events`, { method: "DELETE" });
+			const json = await res.json();
+			if (!res.ok || json.ok === false) throw new Error("Delete faalde");
+			await loadAll();
 		} catch (e) {
 			setErr(e?.message || "Onbekende fout");
 		} finally {
@@ -69,6 +139,7 @@ export default function App() {
 		return events.filter((e) => {
 			if (uid !== "all" && e.uid !== uid) return false;
 			if (type !== "all" && e.type !== type) return false;
+
 			if (clubQ) {
 				const c = (e.club || "").toLowerCase();
 				if (!c.includes(clubQ)) return false;
@@ -76,6 +147,11 @@ export default function App() {
 			return true;
 		});
 	}, [events, uid, type, club]);
+
+	const selectedUser = useMemo(() => {
+		if (uid === "all") return null;
+		return users.find((u) => u.uid === uid) || null;
+	}, [users, uid]);
 
 	const counters = useMemo(() => {
 		let total = filtered.length;
@@ -120,10 +196,63 @@ export default function App() {
 		};
 	}, [filtered]);
 
-	const selectedUser = useMemo(() => {
-		if (uid === "all") return null;
-		return users.find((u) => u.uid === uid) || null;
-	}, [users, uid]);
+	// votes per tijd-bucket (sparkline)
+	const votesSpark = useMemo(() => {
+		const votes = filtered
+			.filter((e) => e.type === "vote" && e.ts)
+			.map((e) => {
+				const t = Date.parse(e.ts);
+				return Number.isFinite(t) ? t : null;
+			})
+			.filter((t) => t != null)
+			.sort((a, b) => a - b);
+
+		if (votes.length === 0) return Array.from({ length: 12 }, () => 0);
+
+		const buckets = 12;
+		const minT = votes[0];
+		const maxT = votes[votes.length - 1];
+		const range = Math.max(1, maxT - minT);
+		const counts = Array.from({ length: buckets }, () => 0);
+
+		for (const t of votes) {
+			const idx = clamp(
+				Math.floor(((t - minT) / range) * buckets),
+				0,
+				buckets - 1
+			);
+			counts[idx] += 1;
+		}
+		return counts;
+	}, [filtered]);
+
+	// Stacked bar widths netjes maken (min-width zodat je altijd 2 segmenten ziet)
+	const bar = useMemo(() => {
+		const totalVotes = Math.max(0, counters.votes);
+		if (totalVotes === 0) {
+			return { upW: 50, downW: 50, upTxt: "0", downTxt: "0" };
+		}
+		const rawUp = (counters.up / totalVotes) * 100;
+		let upW = rawUp;
+		let downW = 100 - rawUp;
+
+		const minSeg = 6;
+		if (upW > 0 && upW < minSeg) {
+			upW = minSeg;
+			downW = 100 - minSeg;
+		}
+		if (downW > 0 && downW < minSeg) {
+			downW = minSeg;
+			upW = 100 - minSeg;
+		}
+
+		return {
+			upW,
+			downW,
+			upTxt: `${counters.up}`,
+			downTxt: `${counters.down}`,
+		};
+	}, [counters]);
 
 	return (
 		<div className="page">
@@ -136,9 +265,19 @@ export default function App() {
 				</div>
 
 				<div className="actions">
-					<button onClick={loadAll} disabled={loading}>
-						{loading ? "Laden..." : "↻ Refresh"}
-					</button>
+					<div className="actions">
+						<button onClick={loadAll} disabled={loading}>
+							{loading ? "Laden..." : "↻ Refresh"}
+						</button>
+
+						<button onClick={() => deleteLatest(200)} disabled={loading}>
+							🧹 Delete laatste 200
+						</button>
+
+						<button onClick={deleteAll} disabled={loading}>
+							🗑️ Delete alles
+						</button>
+					</div>
 				</div>
 			</div>
 
@@ -147,6 +286,33 @@ export default function App() {
 					<b>Fout:</b> {err}
 				</div>
 			)}
+
+			{/* SUMMARY ROW */}
+			<div className="summary">
+				<div className="sumCard">
+					<div className="k">Totaal events</div>
+					<div className="v">{counters.total}</div>
+					<div className="mini muted">na filters</div>
+				</div>
+
+				<div className="sumCard">
+					<div className="k">Votes</div>
+					<div className="v">{counters.votes}</div>
+					<div className="mini muted">up-rate: {safePct(counters.upRate)}</div>
+				</div>
+
+				<div className="sumCard">
+					<div className="k">Gem. decision</div>
+					<div className="v">{fmtMs(counters.avgDecisionMs)}</div>
+					<div className="mini muted">alle votes</div>
+				</div>
+
+				<div className="sumCard">
+					<div className="k">Sessions</div>
+					<div className="v">{counters.sessionStarts}</div>
+					<div className="mini muted">session_start</div>
+				</div>
+			</div>
 
 			<div className="grid">
 				{/* Filters */}
@@ -185,42 +351,55 @@ export default function App() {
 					</div>
 
 					<div className="hint">
-						Tip: kies eerst een uid → je ziet meteen gedrag + events voor die
-						gebruiker.
+						Tip: kies een uid → je ziet meteen gedrag + events voor die user.
 					</div>
 				</div>
 
-				{/* Counters */}
+				{/* Insights */}
 				<div className="card">
-					<div className="cardTitle">Counters (na filters)</div>
+					<div className="cardTitle">Insights</div>
 
-					<div className="stats">
-						<div className="stat">
-							<div className="k">Totaal events</div>
-							<div className="v">{counters.total}</div>
+					<div className="stacked">
+						<div className="stackLabel">
+							<span className="muted">Up vs Down</span>
+							<span>
+								<b>{safePct(counters.upRate)}</b> up
+							</span>
 						</div>
-						<div className="stat">
-							<div className="k">Votes</div>
-							<div className="v">{counters.votes}</div>
+
+						<div className="stackBar" title="Up/Down verdeling">
+							<div className="seg up" style={{ width: `${bar.upW}%` }}>
+								<span>👍 {bar.upTxt}</span>
+							</div>
+							<div className="seg down" style={{ width: `${bar.downW}%` }}>
+								<span>👎 {bar.downTxt}</span>
+							</div>
 						</div>
-						<div className="stat">
-							<div className="k">Session starts</div>
-							<div className="v">{counters.sessionStarts}</div>
-						</div>
-						<div className="stat">
+					</div>
+
+					<div className="insGrid">
+						<div className="ins">
 							<div className="k">Rumor shown</div>
 							<div className="v">{counters.rumorShown}</div>
 						</div>
-						<div className="stat">
-							<div className="k">Up / Down</div>
+						<div className="ins">
+							<div className="k">Votes / Session</div>
 							<div className="v">
-								{counters.up} / {counters.down} ({pct(counters.upRate)})
+								{counters.sessionStarts
+									? (counters.votes / counters.sessionStarts).toFixed(1)
+									: "-"}
 							</div>
 						</div>
-						<div className="stat">
-							<div className="k">Gem. decision</div>
-							<div className="v">{fmtMs(counters.avgDecisionMs)}</div>
+					</div>
+
+					<div className="sparkRow">
+						<div>
+							<div className="muted" style={{ fontSize: 12 }}>
+								Votes door de tijd
+							</div>
+							<div className="mini muted">12 buckets (range van je data)</div>
 						</div>
+						<Sparkline data={votesSpark} />
 					</div>
 
 					{selectedUser && (
@@ -239,7 +418,7 @@ export default function App() {
 								<span>{selectedUser.votes}</span>
 							</div>
 							<div className="userLine">
-								<span className="muted">avgDecisionMs</span>
+								<span className="muted">avgDecision</span>
 								<span>
 									{selectedUser.avgDecisionMs != null
 										? fmtMs(selectedUser.avgDecisionMs)
@@ -273,8 +452,8 @@ export default function App() {
 								</tr>
 							</thead>
 							<tbody>
-								{filtered.slice(0, 200).map((e) => (
-									<tr key={e._id || `${e.ts}-${e.type}-${Math.random()}`}>
+								{filtered.slice(0, 200).map((e, idx) => (
+									<tr key={e._id || `${e.ts}-${e.type}-${idx}`}>
 										<td className="mono">{e.ts || "-"}</td>
 										<td>
 											<span className={`pill ${e.type || ""}`}>
@@ -290,6 +469,7 @@ export default function App() {
 										</td>
 									</tr>
 								))}
+
 								{filtered.length === 0 && (
 									<tr>
 										<td colSpan="7" className="muted">
@@ -302,15 +482,15 @@ export default function App() {
 					</div>
 
 					<div className="hint" style={{ marginTop: 10 }}>
-						Toont max 200 rows (performance). Gebruik filters om te focussen.
+						Toont max 200 rows. Gebruik filters om te focussen.
 					</div>
 				</div>
 			</div>
 
 			<div className="footer">
 				<span className="muted">
-					Als je niets ziet: check backend <code>/admin/events</code> en of je
-					frontend wel events post naar <code>/events</code>.
+					Niets zichtbaar? Check backend <code>/admin/events</code> en of de
+					user frontend post naar <code>/events</code>.
 				</span>
 			</div>
 		</div>

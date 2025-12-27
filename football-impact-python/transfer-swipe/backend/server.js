@@ -239,6 +239,8 @@ app.get("/admin/events", async (req, res) => {
 		res.status(500).json({ ok: false, error: "Server error" });
 	}
 });
+
+// Profile: stats per uid (Mongo)
 app.get("/profile/:uid", async (req, res) => {
 	try {
 		if (!eventsCol)
@@ -307,8 +309,54 @@ app.get("/profile/:uid", async (req, res) => {
 			topClubsVoted: top(voted),
 		});
 	} catch (err) {
-		console.error(err);
+		console.error("GET /profile/:uid error:", err);
 		res.status(500).json({ ok: false, error: "Server error" });
+	}
+});
+
+// ADMIN: verwijder laatste N events (nieuwste eerst)
+app.delete("/admin/events/latest", async (req, res) => {
+	try {
+		if (!eventsCol) {
+			return res.status(503).json({ ok: false, error: "DB not ready" });
+		}
+
+		const limit = Math.min(parseInt(req.query.limit ?? "100", 10) || 100, 500);
+
+		// Nieuwste eerst (op _id is meestal veilig)
+		const docs = await eventsCol
+			.find({}, { projection: { _id: 1 } })
+			.sort({ _id: -1 })
+			.limit(limit)
+			.toArray();
+
+		const ids = docs.map((d) => d._id);
+		if (ids.length === 0) return res.json({ ok: true, deleted: 0 });
+
+		const del = await eventsCol.deleteMany({ _id: { $in: ids } });
+		return res.json({ ok: true, deleted: del.deletedCount });
+	} catch (e) {
+		console.error("DELETE /admin/events/latest error:", e);
+		return res
+			.status(500)
+			.json({ ok: false, error: e?.message || "delete failed" });
+	}
+});
+
+// ADMIN: alles leegmaken (handig voor reset)
+app.delete("/admin/events", async (req, res) => {
+	try {
+		if (!eventsCol) {
+			return res.status(503).json({ ok: false, error: "DB not ready" });
+		}
+
+		const del = await eventsCol.deleteMany({});
+		return res.json({ ok: true, deleted: del.deletedCount });
+	} catch (e) {
+		console.error("DELETE /admin/events error:", e);
+		return res
+			.status(500)
+			.json({ ok: false, error: e?.message || "delete failed" });
 	}
 });
 
