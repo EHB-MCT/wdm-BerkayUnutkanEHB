@@ -1,0 +1,23 @@
+{
+	"type": "module",
+	"name": "backend",
+	"version": "1.0.0",
+	"main": "index.js",
+	"scripts": {
+		"dev": "nodemon server.js",
+		"start": "node server.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"cors": "^2.8.5",
+		"express": "^5.2.1",
+		"mongodb": "^7.0.0",
+		"zod": "^4.2.1"
+	},
+	"devDependencies": {
+		"nodemon": "^3.1.11"
+	}
+}
